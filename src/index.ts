@@ -23,13 +23,11 @@ app.get('/endpoint2', (c) => {
 
 app.use(async (c, next) => {
   const { method, path } = c.req;
-  await runtime.runPromise(
-    Effect.gen(function* () {
-      yield* Effect.logInfo(`[Request] ${method} ${path}`);
-      yield* Effect.promise(next);
-      yield* Effect.logInfo(`[Response] ${method} ${path}`);
-    })
-  );
+  await Effect.gen(function* () {
+    yield* Effect.logInfo(`[Request] ${method} ${path}`);
+    yield* Effect.promise(next);
+    yield* Effect.logInfo(`[Response] ${method} ${path}`);
+  }).pipe(runtime.runPromise);
 });
 
 app.get('/endpoint3', async (c, next) =>
