@@ -18,7 +18,7 @@ app.get('/endpoint1', (c) => {
 });
 
 app.get('/endpoint2', (c) => {
-  return c.text('Hello Hono from endpoint 1!');
+  return c.text('Hello Hono from endpoint 2!');
 });
 
 app.use(async (c, next) => {
@@ -34,7 +34,7 @@ app.get('/endpoint3', async (c, next) =>
   Effect.gen(function* () {
     yield* Effect.log('inside endpoint handler');
     yield* Effect.sleep(993 /* milliseconds */);
-    return yield* Effect.succeed(c.text('Hello Hono from endpoint 1!\n'));
+    return yield* Effect.succeed(c.text('Hello Hono from endpoint 3!\n'));
   }).pipe(
     Effect.withSpan('endpoint3'),
     Effect.annotateLogs({
