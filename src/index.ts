@@ -36,8 +36,15 @@ app.get('/endpoint3', async (c, next) =>
   Effect.gen(function* () {
     yield* Effect.log('inside endpoint handler');
     yield* Effect.sleep(993 /* milliseconds */);
-    return yield* Effect.succeed(c.text('Hello Hono from endpoint 1!'));
-  }).pipe(Effect.withSpan('endpoint3'), runtime.runPromise)
+    return yield* Effect.succeed(c.text('Hello Hono from endpoint 1!\n'));
+  }).pipe(
+    Effect.withSpan('endpoint3'),
+    Effect.annotateLogs({
+      context: 'super-server',
+      newContext: 'yay',
+    }),
+    runtime.runPromise
+  )
 );
 
 const mainprogram = Effect.gen(function* () {
