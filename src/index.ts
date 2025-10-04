@@ -5,11 +5,13 @@ import { OptionalDevToolsLayer } from './devtools.js';
 
 const app = new Hono();
 
-export const appLayer = Layer.mergeAll(
-  Logger.pretty,
-  Layer.scopedDiscard(Effect.annotateLogsScoped('context', 'server')),
-  OptionalDevToolsLayer
-).pipe(Layer.provideMerge(EnvType.Live));
+export const appLayer = Layer.mergeAll(OptionalDevToolsLayer).pipe(
+  Layer.provideMerge(EnvType.Live),
+  Layer.provideMerge(Logger.pretty),
+  Layer.provideMerge(
+    Layer.scopedDiscard(Effect.annotateLogsScoped('context', 'server'))
+  )
+);
 
 export const runtime = ManagedRuntime.make(appLayer);
 
@@ -21,29 +23,30 @@ app.get('/endpoint2', (c) => {
   return c.text('Hello Hono from endpoint 2!');
 });
 
-app.use(async (c, next) => {
-  const { method, path } = c.req;
-  await Effect.gen(function* () {
-    yield* Effect.logInfo(`[Request] ${method} ${path}`);
-    yield* Effect.promise(next);
-    yield* Effect.logInfo(`[Response] ${method} ${path}`);
-  }).pipe(runtime.runPromise);
-});
-
 app.get('/endpoint3', async (c, next) =>
   Effect.gen(function* () {
     yield* Effect.log('inside endpoint handler');
-    yield* Effect.sleep(993 /* milliseconds */);
+    yield* Effect.log('inside endpoint handler2');
+
     return yield* Effect.succeed(c.text('Hello Hono from endpoint 3!\n'));
   }).pipe(
+    withRequestIdLogAnnotation(c),
     Effect.withSpan('endpoint3'),
-    Effect.annotateLogs({
-      context: 'super-server',
-      newContext: 'yay',
-    }),
     runtime.runPromise
   )
 );
+
+const withRequestIdLogAnnotation =
+  (c: any) =>
+  <A, E, R>(self: Effect.Effect<A, E, R>) =>
+    Effect.gen(function* () {
+      const { method, path } = c.req;
+      yield* Effect.annotateLogsScoped('requestId', Math.random().toString());
+      yield* Effect.logInfo(`[Request] ${method} ${path}`);
+      const result = yield* self;
+      yield* Effect.logInfo(`[Response] ${method} ${path}`);
+      return result;
+    }).pipe(Effect.scoped);
 
 const mainprogram = Effect.gen(function* () {
   yield* Effect.log('Hello from effect');
